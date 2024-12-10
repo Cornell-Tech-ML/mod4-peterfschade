@@ -33,10 +33,8 @@ def test_avg(t: Tensor) -> None:
 def test_max(t: Tensor) -> None:
     # TODO: Implement for Task 4.4.
     # test forward of max function
-    
-    
+
     raise NotImplementedError("Need to implement for Task 4.4")
-    
 
 
 @pytest.mark.task4_4

@@ -83,8 +83,8 @@ class CNNSentimentKim(minitorch.Module):
         x_ = self.linear(x_)
         x_ = minitorch.dropout(x_, 0.25, ignore= not self.training)
         return x_.sigmoid().view(x_.shape[0])
-        
-        
+
+
         #raise NotImplementedError("Need to implement for Task 4.5")
 
 
