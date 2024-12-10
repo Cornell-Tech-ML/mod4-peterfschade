@@ -19,6 +19,7 @@ from .scalar_functions import (
     ReLU,
     ScalarFunction,
     Sigmoid,
+    wrap_tuple,
 )
 
 ScalarLike = Union[float, int, "Scalar"]
@@ -91,6 +92,68 @@ class Scalar:
     def __rmul__(self, b: ScalarLike) -> Scalar:
         return self * b
 
+    def relu(self) -> Scalar:
+        """_summary_
+        Applies ReLU function to a scalar
+
+        Returns
+        -------
+            Scalar: Transformed scalar
+
+        """
+        return ReLU.apply(self)
+
+    def sigmoid(self) -> Scalar:
+        """_summary_
+        Applies a sigmoid to a scalar
+
+        Returns
+        -------
+            Scalar: Transformed scalar
+
+        """
+        return Sigmoid.apply(self)
+
+    def exp(self) -> Scalar:
+        """_summary_
+        Applies exp function to a scalar
+
+        Returns
+        -------
+            Scalar: Transformed scaler
+
+        """
+        return Exp.apply(self)
+
+    def log(self) -> Scalar:
+        """_summary_
+        Applies log to a scalar
+
+        Returns
+        -------
+            Scalar: transformed scalar
+
+        """
+        return Log.apply(self)
+
+    def __add__(self, b: ScalarLike) -> Scalar:
+        return Add.apply(self, b)
+
+    def __neg__(self) -> Scalar:
+        return Neg.apply(self)
+
+    def __sub__(self, b: ScalarLike) -> Scalar:
+        return Add.apply(self, -b)
+
+    def __lt__(self, b: ScalarLike) -> Scalar:
+        return LT.apply(self, b)
+
+    def __gt__(self, b: ScalarLike) -> Scalar:
+        return LT.apply(b, self)
+
+    def __eq__(self, b: ScalarLike) -> Scalar:
+        return EQ.apply(self, b)
+
     # Variable elements for backprop
 
     def accumulate_derivative(self, x: Any) -> None:
@@ -112,21 +175,28 @@ class Scalar:
         return self.history is not None and self.history.last_fn is None
 
     def is_constant(self) -> bool:
+        """_summary_
+        Returns True if Scalar is a constant, otherwise False
+
+        Returns
+        -------
+            bool: True if constant, False otherwise
+
+        """
         return self.history is None
 
     @property
     def parents(self) -> Iterable[Variable]:
-        """Get the variables used to create this one."""
+        """_summary_
+        Get inputs of the scalar, returns list of inputs
+
+        Returns
+        -------
+            Iterable[Variable]: list of inputs
+
+        """
         assert self.history is not None
         return self.history.inputs
-
-    def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
-        h = self.history
-        assert h is not None
-        assert h.last_fn is not None
-        assert h.ctx is not None
-
-        raise NotImplementedError("Need to include this file from past assignment.")
 
     def backward(self, d_output: Optional[float] = None) -> None:
         """Calls autodiff to fill in the derivatives for the history of this object.
@@ -141,22 +211,51 @@ class Scalar:
             d_output = 1.0
         backpropagate(self, d_output)
 
-    raise NotImplementedError("Need to include this file from past assignment.")
+    def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+        """_summary_
+
+        Args:
+        ----
+            d_output (Any): starting derivative
+
+        Returns:
+        -------
+            Iterable[Tuple[Variable, Any]]: returns list of derivatives of each input variable
+
+        """
+        h = self.history
+        assert h is not None
+        assert h.last_fn is not None
+        assert h.ctx is not None
+
+        d_input = h.last_fn._backward(h.ctx, d_output)
+
+        d_input = wrap_tuple(d_input)
+
+        return [
+            (inp, di) for inp, di in zip(self.parents, d_input) if not inp.is_constant()
+        ]
+
+        # TODO: Implement for Task 1.3.
+        # raise NotImplementedError("Need to implement for Task 1.3")
+
+    # TODO: Implement for Task 1.2.
+    # raise NotImplementedError("Need to implement for Task 1.2")
 
 
 def derivative_check(f: Any, *scalars: Scalar) -> None:
     """Checks that autodiff works on a python function.
     Asserts False if derivative is incorrect.
 
-    Parameters
-    ----------
+    Args:
+    ----
         f : function from n-scalars to 1-scalar.
         *scalars  : n input scalar values.
 
     """
     out = f(*scalars)
     out.backward()
-
+    # import pdb; pdb.set_trace();
     err_msg = """
 Derivative check at arguments f(%s) and received derivative f'=%f for argument %d,
 but was expecting derivative f'=%f from central difference."""
@@ -164,6 +263,7 @@ but was expecting derivative f'=%f from central difference."""
         check = central_difference(f, *scalars, arg=i)
         print(str([x.data for x in scalars]), x.derivative, i, check)
         assert x.derivative is not None
+        # import pdb; pdb.set_trace();
         np.testing.assert_allclose(
             x.derivative,
             check.data,

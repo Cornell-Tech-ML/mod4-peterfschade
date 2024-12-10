@@ -38,14 +38,23 @@ class ScalarFunction:
 
     @classmethod
     def apply(cls, *vals: ScalarLike) -> Scalar:
+        """_summary_
+        Apply a function to a scalar, or set of Scalars
+        Returns:
+            Scalar: Scalar with saved information
+
+        """
         raw_vals = []
         scalars = []
+
         for v in vals:
             if isinstance(v, minitorch.scalar.Scalar):
                 scalars.append(v)
                 raw_vals.append(v.data)
             else:
-                scalars.append(minitorch.scalar.Scalar(v))
+                c = minitorch.scalar.Scalar(v)
+                # c.history = None
+                scalars.append(c)
                 raw_vals.append(v)
 
         # Create the context.
@@ -66,10 +75,37 @@ class Add(ScalarFunction):
 
     @staticmethod
     def forward(ctx: Context, a: float, b: float) -> float:
+        """_summary_
+        Add two scalars
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): scalar
+            b (float): scalar
+
+        Returns:
+        -------
+            float: new scalar a+b
+
+        """
         return a + b
 
     @staticmethod
     def backward(ctx: Context, d_output: float) -> Tuple[float, ...]:
+        """_summary_
+        Returns derivative of addition
+
+        Args:
+        ----
+            ctx (Context): context
+            d_output (float): back_derivative
+
+        Returns:
+        -------
+            Tuple[float, ...]: d_output, d_output
+
+        """
         return d_output, d_output
 
 
@@ -78,15 +114,357 @@ class Log(ScalarFunction):
 
     @staticmethod
     def forward(ctx: Context, a: float) -> float:
+        """_summary_
+        Take log of input scalar
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): scalar
+
+        Returns:
+        -------
+            float: new scalar log(a)
+
+        """
         ctx.save_for_backward(a)
         return operators.log(a)
 
     @staticmethod
     def backward(ctx: Context, d_output: float) -> float:
+        """_summary_
+        derivative of ln(a) * back_derivative
+
+        Args:
+        ----
+            ctx (Context): context
+            d_output (float): back_derivative
+
+        Returns:
+        -------
+            float: derivative
+
+        """
         (a,) = ctx.saved_values
         return operators.log_back(a, d_output)
+
+
+class Mul(ScalarFunction):
+    """Addition function $f(x, y) = x * y$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float, b: float) -> float:
+        """_summary_
+        multiply two scalars
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): scalar
+            b (float): scalar
+
+        Returns:
+        -------
+            float: new scalar a * b
+
+        """
+        ctx.save_for_backward(a, b)
+        return operators.mul(a, b)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> Tuple[float, float]:
+        """_summary_
+        return back derivative of multiplying a and b
+
+        Args:
+        ----
+            ctx (Context): _description_
+            d_output (float): back_derivative
+
+        Returns:
+        -------
+            Tuple[float, float]: b * d_output, a * d_output
+
+        """
+        (a, b) = ctx.saved_values
+        return (b * d_output, a * d_output)
+
+
+class Inv(ScalarFunction):
+    """computes 1/x"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """_summary_
+        Compute 1/a
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): Scalar input
+
+        Returns:
+        -------
+            float: Inv(a): (1/a)
+
+        """
+        ctx.save_for_backward(a)
+        return operators.inv(a)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """_summary_
+
+        Args:
+        ----
+            ctx (Context): context
+            d_output (float): back_derivative
+
+        Returns:
+        -------
+            float: derivative
+
+        """
+        (a,) = ctx.saved_values
+        return operators.inv_back(a, d_output)
+
+
+class Neg(ScalarFunction):
+    """Negate a scalar"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """_summary_
+        Negates a Scalar
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): Scalar
+
+        Returns:
+        -------
+            float: Neg (scalar)
+
+        """
+        return operators.neg(a)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """_summary_
+        derivative of -x times a back_derivative
+
+        Args:
+        ----
+            ctx (Context): context
+            d_output (float): back_derivative
+
+        Returns:
+        -------
+            float: derivative
+
+        """
+        return -d_output
+
+
+class Sigmoid(ScalarFunction):
+    """Apply a sigmoid function to input"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """_summary_
+        Apply a sigmoid function to input
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): Scalar
+
+        Returns:
+        -------
+            float: sigmoid(a)
+
+        """
+        f = operators.sigmoid(a)
+        ctx.save_for_backward(f)
+        return f
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """_summary_
+
+        Args:
+        ----
+            ctx (Context): context
+            d_output (float): back_derivative
+
+        Returns:
+        -------
+            float: derivative of sigmoid * back_derivative
+
+        """
+        (a,) = ctx.saved_values
+        return a * (1 - a) * d_output
+
+
+class ReLU(ScalarFunction):
+    """Apply ReLU to input"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """_summary_
+        Apply a ReLU to input
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): input Scalar
+
+        Returns:
+        -------
+            float: Scalar(0) if a < 0, else Scalar(a)
+
+        """
+        ctx.save_for_backward(a)
+        return operators.relu(a)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """_summary_
+        Compute back derivative of ReLU * back_derivative
+
+        Args:
+        ----
+            ctx (Context): context
+            d_output (float): back derivative
+
+        Returns:
+        -------
+            float: derivative
+
+        """
+        (a,) = ctx.saved_values
+        return operators.relu_back(a, d_output)
+
+
+class Exp(ScalarFunction):
+    """Compute e^(x) of Scalar"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """_summary_
+        returns e^(input)
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): input Scalar
+
+        Returns:
+        -------
+            float: Scalar (exp(a))
+
+        """
+        f = operators.exp(a)
+        ctx.save_for_backward(f)
+        return f
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """_summary_
+        derivative of exp(a) * back derivative
+
+        Args:
+        ----
+            ctx (Context): Context with saved values
+            d_output (float): back derivative
+
+        Returns:
+        -------
+            float: derivative of Scalar exp(input) * back derivative
+
+        """
+        (a,) = ctx.saved_values
+        return a * d_output
+
+
+class LT(ScalarFunction):
+    """check if one Scalar is less than the other"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float, b: float) -> float:
+        """_summary_
+        check if two scalars a < b
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): scalar
+            b (float): scalar
+
+        Returns:
+        -------
+            float: 1.0 if a < b, 0.0 otherwise
+
+        """
+        return operators.lt(a, b)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> Tuple[float, float]:
+        """_summary_
+
+        Args:
+        ----
+            ctx (Context): context
+            d_output (float): back derivative
+
+        Returns:
+        -------
+            Tuple[float, float]: [0.0, 0.0] derivative
+
+        """
+        return (0.0, 0.0)
+
+
+class EQ(ScalarFunction):
+    """Check if two scalars are equal"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float, b: float) -> float:
+        """_summary_
+        check if two scalars are equal
+
+        Args:
+        ----
+            ctx (Context): context
+            a (float): scalar
+            b (float): scalar
+
+        Returns:
+        -------
+            float: new scalar, 1.0 if True, else 0.0
+
+        """
+        return operators.eq(a, b)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> Tuple[float, float]:
+        """_summary_
+
+        Args:
+        ----
+            ctx (Context): context
+            d_output (float): back derivative
+
+        Returns:
+        -------
+            Tuple[float, float]: [0.0, 0.0] derivative
+
+        """
+        return (0.0, 0.0)
 
 
 # To implement.
 
 
+# TODO: Implement for Task 1.2.

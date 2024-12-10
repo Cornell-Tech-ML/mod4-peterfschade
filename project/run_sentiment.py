@@ -35,7 +35,8 @@ class Conv1d(minitorch.Module):
 
     def forward(self, input):
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        return minitorch.conv1d(input, self.weights.value) + self.bias.value
+        #raise NotImplementedError("Need to implement for Task 4.5")
 
 
 class CNNSentimentKim(minitorch.Module):
@@ -48,7 +49,7 @@ class CNNSentimentKim(minitorch.Module):
         feature_map_size=100 output channels and [3, 4, 5]-sized kernels
         followed by a non-linear activation function (the paper uses tanh, we apply a ReLu)
     2. Apply max-over-time across each feature map
-    3. Apply a Linear to size C (number of classes) followed by a ReLU and Dropout with rate 25%
+    3. Apply a Linear to size C (number of classes) followed Dropout with rate 25%
     4. Apply a sigmoid over the class dimension.
     """
 
@@ -62,14 +63,29 @@ class CNNSentimentKim(minitorch.Module):
         super().__init__()
         self.feature_map_size = feature_map_size
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        self.conv1 = Conv1d(embedding_size, feature_map_size, filter_sizes[0])
+        self.conv2 = Conv1d(embedding_size, feature_map_size, filter_sizes[1])
+        self.conv3 = Conv1d(embedding_size, feature_map_size, filter_sizes[2])
+        self.linear = Linear(feature_map_size, 1)
+        #raise NotImplementedError("Need to implement for Task 4.5")
 
     def forward(self, embeddings):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        x = embeddings.permute(0, 2, 1)
+        x1 = self.conv1(x).relu()
+        x2 = self.conv2(x).relu()
+        x3 = self.conv3(x).relu()
+        #max over time, [2] is the dimension to max over
+        x_ = (minitorch.max(x1, 2) + minitorch.max(x2, 2) + minitorch.max(x3, 2)).view(embeddings.shape[0], self.feature_map_size)
+        x_ = self.linear(x_)
+        x_ = minitorch.dropout(x_, 0.25, ignore= not self.training)
+        return x_.sigmoid().view(x_.shape[0])
+        
+        
+        #raise NotImplementedError("Need to implement for Task 4.5")
 
 
 # Evaluation helper methods

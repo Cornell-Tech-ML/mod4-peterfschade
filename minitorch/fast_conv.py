@@ -89,9 +89,31 @@ def _tensor_conv1d(
     )
     s1 = input_strides
     s2 = weight_strides
-
     # TODO: Implement for Task 4.1.
-    raise NotImplementedError("Need to implement for Task 4.1")
+    for out_i in prange(out_size):
+        out_index = np.zeros(3, dtype=np.int32)
+        to_index(out_i, out_shape, out_index)
+        cbatch, cout_chan, cwidth = out_index
+        v = 0
+        for cin_chan in prange(in_channels):
+            
+            for ckw in range(kw):
+                i = ckw
+                if reverse:
+                    i = kw - ckw - 1
+                    
+                w = weight[ s2[0] * cout_chan + s2[1] * cin_chan + s2[2] * i]
+                inc = 0
+                if reverse:
+                    if cwidth - i >= 0:
+                        inc = input[cbatch * s1[0] + cin_chan * s1[1] + (cwidth - i) * s1[2] ]
+                else:
+                    if i + cwidth < width:
+                        inc = input[cbatch * s1[0] + cin_chan * s1[1] + (i + cwidth) * s1[2] ]
+                v += w * inc
+        out[cbatch * out_strides[0] + cout_chan * out_strides[1] + cwidth * out_strides[2]] = v
+    
+    #raise NotImplementedError("Need to implement for Task 4.1")
 
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
@@ -218,9 +240,40 @@ def _tensor_conv2d(
     # inners
     s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
     s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
+    
+    for out_i in prange(out_size):
+        out_index = np.zeros(4, dtype=np.int32)
+        to_index(out_i, out_shape, out_index)
+        cbatch, cout_chan, cheight, cwidth = out_index
+        v = 0
+        for cin_chan in prange(in_channels):
+            for ckh in range(kh):
+                for ckw in range(kw):
+                    i = ckw
+                    j = ckh
+                    if reverse:
+                        i = kw - ckw - 1
+                        j = kh - ckh - 1
+                    w = weight[ s20 * cout_chan + s21 * cin_chan + s22 * j + s23 * i]
+                    inc = 0
+                    if reverse:
+                        if cheight - j >= 0 and cwidth - i >= 0:
+                            inc = input[
+                                cbatch * s10 + cin_chan * s11 + (cheight - j) * s12 + (cwidth - i) * s13
+                                ]
+                    else:
+                        if j + cheight < height and i + cwidth < width:
+                            inc = input[
+                                cbatch * s10 + cin_chan * s11 + (j + cheight) * s12 + (i + cwidth) * s13
+                            ]
+                    v += w * inc
+        
+        out[
+            cbatch * out_strides[0] + cout_chan * out_strides[1] + cheight * out_strides[2] + cwidth * out_strides[3]
+        ] = v
 
     # TODO: Implement for Task 4.2.
-    raise NotImplementedError("Need to implement for Task 4.2")
+    #raise NotImplementedError("Need to implement for Task 4.2")
 
 
 tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)
