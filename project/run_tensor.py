@@ -5,12 +5,43 @@ Be sure you have minitorch installed in you Virtual Env.
 
 import minitorch
 
-# Use this function to make a random parameter in
-# your module.
 def RParam(*shape):
+    #random parameters of size shape
     r = 2 * (minitorch.rand(shape) - 0.5)
     return minitorch.Parameter(r)
 
+# TODO: Implement for Task 2.5.
+class Network(minitorch.Module):
+    def __init__(self, hidden_layers):
+        super().__init__() # initialize module
+        self.layer1 = Linear(2,hidden_layers) # input layer
+        self.layer2 = Linear(hidden_layers, hidden_layers) # hidden layer
+        self.layer3 = Linear(hidden_layers, 1) # output layer
+
+    def forward(self, x):
+        h = self.layer1.forward(x).relu() # relu activation function on layer 1
+        h2 = self.layer2.forward(h).relu() # relu activation function on layer 2
+        return self.layer3.forward(h2).sigmoid() # sigmoid activation function on layer 3
+
+class Linear(minitorch.Module):
+    def __init__(self, in_size, out_size):
+        super().__init__() # initialize module
+        self.weights = RParam(in_size, out_size) # intialize weights
+        self.bias = RParam(out_size) # initialize bias
+        self.out_size = out_size # output size
+
+    def forward(self, x):
+        # linear weights
+        # x: (N, in_size)
+        # weights: (in_size, out_size)
+        # bias: (out_size)
+        # linear = x * weights + bias
+
+        batch, in_size = x.shape
+        return (
+            self.weights.value.view(1, in_size, self.out_size)
+            * x.view(batch, in_size, 1)
+            ).sum(1).view(batch,self.out_size) + self.bias.value.view(self.out_size)
 
 def default_log_fn(epoch, total_loss, correct, losses):
     print("Epoch ", epoch, " loss ", total_loss, "correct", correct)

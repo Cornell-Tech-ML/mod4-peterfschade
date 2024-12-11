@@ -30,26 +30,88 @@ class Module:
         return list(m.values())
 
     def train(self) -> None:
-        """Set the mode of this module and all descendent modules to `train`."""
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Set the mode of this module and all descendent modules to `train`.
+        Recursively update the modules to train
 
-    def eval(self) -> None:
-        """Set the mode of this module and all descendent modules to `eval`."""
-        raise NotImplementedError("Need to include this file from past assignment.")
+        Args:
+        ----
+            self (Module): Current Module
 
-    def named_parameters(self) -> Sequence[Tuple[str, Parameter]]:
-        """Collect all the parameters of this module and its descendents.
-
-        Returns
+        Returns:
         -------
-            The name and `Parameter` of each ancestor parameter.
+            None: Sets this module and all descendent modules to 'Train'
+            i.e. set module.training to True
 
         """
-        raise NotImplementedError("Need to include this file from past assignment.")
+        self.training = True
+        for mod in self.modules():
+            mod.train()
+        # TODO: Implement for Task 0.4.
+        # raise NotImplementedError("Need to implement for Task 0.4")
+
+    def eval(self) -> None:
+        """Set the mode of this module and all descendent modules to `eval`.
+        Recursively update the modules to eval
+
+        Args:
+        ----
+            self (Module): current module
+
+        Returns:
+        -------
+            None: Sets this module and all descendent modules to 'eval'
+            i.e module.training = False
+
+        """
+        self.training = False
+        for mod in self.modules():
+            mod.eval()
+        # TODO: Implement for Task 0.4.
+        # raise NotImplementedError("Need to implement for Task 0.4")
+
+    def named_parameters(self) -> Sequence[Tuple[str, Parameter]]:
+        """Collect all the parameters of this module and its descendent modules.
+        Recursively name the parameters
+
+        Args:
+        ----
+            self (Module): Current module
+
+        Returns:
+        -------
+            Sequence[Tuple[str, Parameter]
+            Tuple(name and `Parameter`) of this module and each ancestor parameter.
+
+        """
+        np = []
+        for p, val in self._parameters.items():
+            np.append((p, val))
+        for name, mod in self._modules.items():
+            np_ = mod.named_parameters()
+            for p_ in np_:
+                np.append((name + "." + p_[0], p_[1]))
+        return np
+        # TODO: Implement for Task 0.4.
+        # raise NotImplementedError("Need to implement for Task 0.4")
 
     def parameters(self) -> Sequence[Parameter]:
-        """Enumerate over all the parameters of this module and its descendents."""
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """_summary_
+        Enumerate over all the parameters of this module and the descendent modules.
+        outputs the parameter name of each element in named_parameters
+
+        Args:
+        ----
+            self: Module, Current module
+
+        Returns:
+        -------
+            sequence: sequence of names of parameters in this module and each descendent module
+
+        """
+        return [param for _, param in self.named_parameters()]
+
+        # TODO: Implement for Task 0.4.
+        # raise NotImplementedError("Need to implement for Task 0.4")
 
     def add_parameter(self, k: str, v: Any) -> Parameter:
         """Manually add a parameter. Useful helper for scalar parameters.
@@ -85,6 +147,21 @@ class Module:
         return None
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """Call the forward method of the module. Magic method
+
+        Args:
+        ----
+        *args : Any
+            Positional arguments for the forward method.
+        **kwargs : Any
+            Keyword arguments for the forward method.
+
+        Returns:
+        -------
+        Any
+            The result of the forward method.
+
+        """
         return self.forward(*args, **kwargs)
 
     def __repr__(self) -> str:
