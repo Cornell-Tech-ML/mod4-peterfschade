@@ -33,8 +33,17 @@ def test_avg(t: Tensor) -> None:
 def test_max(t: Tensor) -> None:
     # TODO: Implement for Task 4.4.
     # test forward of max function
+    t.requires_grad_(True)
+    maxed_tensor = minitorch.Max.apply(t, t._ensure_tensor(2))
+    maxed_tensor.requires_grad_(True)
+    maxed_tensor.backward(minitorch.tensor([[1, 1, 1], [1, 1, 1]]).view(2, 3, 1))
+    assert maxed_tensor.shape == (2, 3, 1)
+    for i in range(2):
+        for j in range(3):
+            for k in range(4):
+                assert maxed_tensor[i, j, 0] >= t[i, j, k]
 
-    raise NotImplementedError("Need to implement for Task 4.4")
+    # raise NotImplementedError("Need to implement for Task 4.4")
 
 
 @pytest.mark.task4_4

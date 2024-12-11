@@ -88,7 +88,9 @@ def argmax(input: Tensor, dim: int) -> Tensor:
         Tensor of size batch x channel x height x width with a 1 at the argmax and 0 elsewhere.
 
     """
-    return reduce_max(input, dim) == input
+    A = reduce_max(input, dim) == input
+
+    return A
     # raise NotImplementedError("Need to implement for Task 4.4")
 
 
